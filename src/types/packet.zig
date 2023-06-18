@@ -1,3 +1,7 @@
+///
+/// Uhhhh
+/// TODO: this whole file is vestigal code I think
+///
 const std = @import("std");
 
 pub const Packet = extern struct {

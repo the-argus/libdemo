@@ -1,10 +1,16 @@
+///
+/// This is where the majority of the demo parsing logic happens. After reading
+/// the header, the entire demo consists of network packets. Each network
+/// packet consists of commands. Different commands and command-related types
+/// such as the command header are found in the ``types`` subdir.
+///
 const std = @import("std");
-const CommandHeader = @import("command_header.zig").CommandHeader;
-const CommandInfo = @import("command_info.zig").CommandInfo;
-const SequenceInfo = @import("sequence_info.zig").SequenceInfo;
-const UserCommand = @import("user_command.zig").UserCommand;
-const readRawData = @import("../io.zig").readRawData;
-const demo_messages = @import("demo_messages.zig").demo_messages;
+const CommandHeader = @import("types/command_header.zig").CommandHeader;
+const CommandInfo = @import("types/command_info.zig").CommandInfo;
+const SequenceInfo = @import("types/sequence_info.zig").SequenceInfo;
+const UserCommand = @import("types/user_command.zig").UserCommand;
+const readRawData = @import("io.zig").readRawData;
+const demo_messages = @import("types/demo_messages.zig").demo_messages;
 const log = std.log.scoped(.libdemo);
 
 /// unused constant
