@@ -1,7 +1,7 @@
 const std = @import("std");
 const readObject = @import("io.zig").readObject;
 const Header = @import("types/header.zig").Header;
-const NetPacket = @import("types/net_packet.zig").NetPacket;
+const NetPacket = @import("net_packet.zig").NetPacket;
 
 const log = std.log.scoped(.demoviewer);
 
