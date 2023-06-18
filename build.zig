@@ -1,6 +1,5 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const app_name = "demo";
 
 pub fn build(b: *std.Build) !void {
     // Standard target options allows the person running `zig build` to choose
@@ -14,13 +13,21 @@ pub fn build(b: *std.Build) !void {
     const mode = b.standardOptimizeOption(.{});
 
     const lib = b.addSharedLibrary(.{
-        .name = app_name,
+        .name = "demozig",
         .optimize = mode,
         .target = target,
         .root_source_file = std.Build.FileSource.relative("demo.zig"),
     });
 
-    lib.linkLibC();
+    const c_lib = b.addSharedLibrary(.{
+        .name = "demo",
+        .optimize = mode,
+        .target = target,
+        .root_source_file = std.Build.FileSource.relative("demo_c.zig"),
+    });
+
+    c_lib.linkLibC();
 
     b.installArtifact(lib);
+    b.installArtifact(c_lib);
 }

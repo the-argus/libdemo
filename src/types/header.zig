@@ -5,7 +5,7 @@ const std = @import("std");
 /// Credits to cancername on discord for writing the original iteration of
 /// the ``validate`` function.
 ///
-pub const ExternDemoHeader = extern struct {
+pub const Header = extern struct {
     magic: [8]u8 align(1), // "HL2DEMO\x00"
     demo_version: i32 align(1),
     network_version: i32 align(1),
@@ -44,5 +44,34 @@ pub const ExternDemoHeader = extern struct {
             if (std.mem.indexOfScalar(u8, v, 0) == null)
                 return error.NoTerminator;
         }
+    }
+
+    pub fn print(self: *@This(), log_fn: *const fn (comptime []u8, anytype) void) void {
+        log_fn(
+            \\Header: {s}
+            \\Protocol: {any}
+            \\Network Protocol: {any}
+            \\Server Name: {s}
+            \\Client Name: {s}
+            \\Map Name: {s}
+            \\Game Directory: {s}
+            \\Playback Time: {any}
+            \\Ticks: {any}
+            \\Frames: {any}
+            \\Signon Length: {any}
+            \\
+        , .{
+            self.*.header,
+            self.*.demo_protocol,
+            self.*.network_protocol,
+            self.*.server_name,
+            self.*.client_name,
+            self.*.map_name,
+            self.*.game_directory,
+            self.*.playback_time,
+            self.*.ticks,
+            self.*.frames,
+            self.*.signon_length,
+        });
     }
 };
