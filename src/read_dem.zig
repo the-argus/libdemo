@@ -20,13 +20,18 @@ pub fn readDemo(relative_path: []const u8) !void {
 
 /// open a relative path
 fn openDemo(relative_path: []const u8) !std.fs.File {
+    log.debug("Opening {s} as demo", .{relative_path});
     return std.fs.cwd().openFile(relative_path, .{});
 }
 
 // read all packets in a loop until null is returned
 fn readAllPackets(file: std.fs.File) !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
+
     while (true) {
-        const netpacket = try NetPacket.read(file);
+        const netpacket = try NetPacket.read(file, allocator);
         if (netpacket == null) {
             return;
         }

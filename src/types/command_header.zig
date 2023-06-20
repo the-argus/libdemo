@@ -1,5 +1,5 @@
 const std = @import("std");
-const demo_messages = @import("demo_messages.zig");
+const demo_messages = @import("demo_messages.zig").demo_messages;
 const readObject = @import("../io.zig").readObject;
 const DemoError = @import("../error.zig").DemoError;
 
@@ -31,13 +31,12 @@ pub const CommandHeader = extern struct {
                     break;
                 }
             }
+            if (!valid_demo_message) {
+                return DemoError.InvalidDemoMessage;
+            }
             if (result.message == .dem_stop) {
                 log.info("Demo stopping code reached, exiting.", .{});
                 std.os.exit(0);
-            }
-            // err on failure
-            if (!valid_demo_message) {
-                return DemoError.InvalidDemoMessage;
             }
         }
 

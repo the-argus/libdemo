@@ -2,7 +2,7 @@ const std = @import("std");
 const Vector = @import("primitives.zig").Vector;
 const Angle = @import("primitives.zig").Angle;
 const log = std.log.scoped(.libdemo);
-const readObject = @import("../io.zig");
+const readObject = @import("../io.zig").readObject;
 
 const FDEMO_NORMAL = 0;
 const FDEMO_USE_ORIGIN2 = 1 << 0;

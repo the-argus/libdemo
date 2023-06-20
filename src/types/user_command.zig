@@ -8,7 +8,7 @@ pub const UserCommand = struct {
     pub fn free_with(self: @This(), allocator: std.mem.Allocator) void {
         allocator.free(self.command);
     }
-    pub fn read(file: std.fs.File, allocator: std.mem.Allocator) !void {
+    pub fn read(file: std.fs.File, allocator: std.mem.Allocator) !@This() {
         var cmd: @This() = undefined;
         cmd.outgoing_sequence = try readObject(file, i32);
         cmd.command = try readRawData(file, allocator);
