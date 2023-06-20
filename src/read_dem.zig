@@ -5,11 +5,15 @@ const NetPacket = @import("net_packet.zig").NetPacket;
 
 const log = std.log.scoped(.demoviewer);
 
+test {
+    try readDemo("tests/demos/shortdemo.dem");
+}
+
 /// Take a demo file and print it to stdout.
 pub fn readDemo(relative_path: []const u8) !void {
     const demo_file = try openDemo(relative_path);
     const header = try readObject(demo_file, Header);
-    header.validate();
+    try header.validate();
     header.print(&log.debug);
     try readAllPackets(demo_file);
 }

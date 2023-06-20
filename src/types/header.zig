@@ -12,10 +12,11 @@ pub const Header = extern struct {
     server_name: [260]u8 align(1),
     client_name: [260]u8 align(1),
     map_name: [260]u8 align(1),
+    game_directory: [260]u8 align(1),
     demo_len_s: f32 align(1),
-    nb_ticks: i32 align(1),
-    nb_frames: i32 align(1),
-    sign_on_len: i32 align(1),
+    ticks: i32 align(1),
+    frames: i32 align(1),
+    signon_length: i32 align(1),
 
     const ValidationError = error{ BadMagic, NegativeValue, InvalidFloat, NoTerminator };
 
@@ -26,9 +27,9 @@ pub const Header = extern struct {
         for ([_]i32{
             dh.demo_version,
             dh.network_version,
-            dh.nb_ticks,
-            dh.nb_frames,
-            dh.sign_on_len,
+            dh.ticks,
+            dh.frames,
+            dh.signon_length,
         }) |v| {
             if (v < 0) return error.NegativeValue;
         }
@@ -46,11 +47,11 @@ pub const Header = extern struct {
         }
     }
 
-    pub fn print(self: *@This(), log_fn: *const fn (comptime []u8, anytype) void) void {
+    pub fn print(self: *const @This(), log_fn: *const fn (comptime []u8, anytype) void) void {
         log_fn(
-            \\Header: {s}
-            \\Protocol: {any}
-            \\Network Protocol: {any}
+            \\Magic: {s}
+            \\Demo Protocol Version: {any}
+            \\Network Protocol Version: {any}
             \\Server Name: {s}
             \\Client Name: {s}
             \\Map Name: {s}
@@ -61,14 +62,14 @@ pub const Header = extern struct {
             \\Signon Length: {any}
             \\
         , .{
-            self.*.header,
-            self.*.demo_protocol,
-            self.*.network_protocol,
+            self.*.magic,
+            self.*.demo_version,
+            self.*.network_version,
             self.*.server_name,
             self.*.client_name,
             self.*.map_name,
             self.*.game_directory,
-            self.*.playback_time,
+            self.*.demo_len_s,
             self.*.ticks,
             self.*.frames,
             self.*.signon_length,

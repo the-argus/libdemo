@@ -24,7 +24,7 @@ pub const NetAddressType = enum(u8) {
     NA_IP,
 };
 
-pub const NetAddress = struct {
+pub const NetAddress = extern struct {
     type: NetAddressType,
     ip: [4]u8,
     port: u16,
@@ -41,7 +41,7 @@ pub const NetPacket = extern struct {
     stream: bool, // was send as stream
     next: *NetPacket, // for internal use, should be NULL in public
 
-    pub fn read(file: std.fs.File, allocator: std.mem.allocator) !?NetPacket {
+    pub fn read(file: std.fs.File, allocator: std.mem.Allocator) !?NetPacket {
         var last_command_header: CommandHeader = undefined;
 
         while (true) {
