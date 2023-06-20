@@ -1,4 +1,4 @@
-*.dem
+./*.dem
 
 # nix stuff
 .direnv/
