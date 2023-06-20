@@ -1,5 +1,6 @@
 const std = @import("std");
 const builtin = @import("builtin");
+const build_options = @import("build-options");
 const readDemo = @import("src/read_dem.zig");
 
 pub const std_options = struct {
@@ -13,6 +14,7 @@ pub const std_options = struct {
 /// Read from a given demo file and print the json to the given output file.
 ///
 pub fn demoToJSON(demo_file: std.fs.File, out: std.fs.File) !void {
+    comptime if (build_options.buildForC) {};
     try readDemo(demo_file);
     _ = out;
 }

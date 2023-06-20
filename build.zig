@@ -23,8 +23,17 @@ pub fn build(b: *std.Build) !void {
         .name = "demo",
         .optimize = mode,
         .target = target,
-        .root_source_file = std.Build.FileSource.relative("demo_c.zig"),
+        .root_source_file = std.Build.FileSource.relative("demo.zig"),
     });
+
+    // create the same option for each, one false and one true
+    const build_options = b.addOptions();
+    lib.addOptions("build-options", build_options);
+    build_options.addOption(bool, "buildForC", false);
+
+    const build_options_c = b.addOptions();
+    c_lib.addOptions("build-options", build_options_c);
+    build_options_c.addOption(bool, "buildForC", true);
 
     c_lib.linkLibC();
 
