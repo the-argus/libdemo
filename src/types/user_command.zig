@@ -1,6 +1,5 @@
 const std = @import("std");
-const readRawData = @import("../io.zig").readRawData;
-const readObject = @import("../io.zig").readObject;
+const File = @import("../io.zig").File;
 
 pub const UserCommand = struct {
     outgoing_sequence: i32,
@@ -8,10 +7,10 @@ pub const UserCommand = struct {
     pub fn free_with(self: @This(), allocator: std.mem.Allocator) void {
         allocator.free(self.command);
     }
-    pub fn read(file: std.fs.File, allocator: std.mem.Allocator) !@This() {
+    pub fn read(file: File, allocator: std.mem.Allocator) !@This() {
         var cmd: @This() = undefined;
-        cmd.outgoing_sequence = try readObject(file, i32);
-        cmd.command = try readRawData(file, allocator);
+        cmd.outgoing_sequence = try file.readObject(i32);
+        cmd.command = try file.readRawData(allocator);
         return cmd;
     }
 };

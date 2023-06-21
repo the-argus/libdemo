@@ -24,6 +24,8 @@ pub fn build(b: *std.Build) !void {
         .target = target,
     });
 
+    buildForC(b, main_tests, false);
+
     const tests_run = b.addRunArtifact(main_tests);
     const test_step = b.step("test", "Run library tests");
     test_step.dependOn(&tests_run.step);
@@ -63,6 +65,12 @@ pub fn build(b: *std.Build) !void {
     }
 }
 
+fn buildForC(b: *std.Build, artifact: anytype, do: bool) void {
+    const build_options = b.addOptions();
+    artifact.addOptions("build-options", build_options);
+    build_options.addOption(bool, "buildForC", do);
+}
+
 fn createStaticCLib(
     b: *std.Build,
     target: std.zig.CrossTarget,
@@ -79,6 +87,7 @@ fn createStaticCLib(
     b.installArtifact(static_lib);
     static_lib.linkLibC();
     b.default_step.dependOn(&static_lib.step);
+    buildForC(b, static_lib, true);
 
     const static_binding_test = b.addExecutable(.{
         .name = "static_binding_test",

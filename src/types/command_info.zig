@@ -2,7 +2,7 @@ const std = @import("std");
 const Vector = @import("primitives.zig").Vector;
 const Angle = @import("primitives.zig").Angle;
 const log = std.log.scoped(.libdemo);
-const readObject = @import("../io.zig").readObject;
+const File = @import("../io.zig").File;
 
 const FDEMO_NORMAL = 0;
 const FDEMO_USE_ORIGIN2 = 1 << 0;
@@ -18,8 +18,8 @@ pub const CommandInfo = extern struct {
     view_angles_2: Angle,
     local_view_angles_2: Angle,
 
-    pub fn read(file: std.fs.File) !@This() {
+    pub fn read(file: File) !@This() {
         log.debug("Reading command info...", .{});
-        return try readObject(file, @This());
+        return try file.readObject(@This());
     }
 };

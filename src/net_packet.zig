@@ -9,7 +9,7 @@ const CommandHeader = @import("types/command_header.zig").CommandHeader;
 const CommandInfo = @import("types/command_info.zig").CommandInfo;
 const SequenceInfo = @import("types/sequence_info.zig").SequenceInfo;
 const UserCommand = @import("types/user_command.zig").UserCommand;
-const readRawData = @import("io.zig").readRawData;
+const File = @import("io.zig").File;
 const demo_messages = @import("types/demo_messages.zig").demo_messages;
 const log = std.log.scoped(.libdemo);
 
@@ -41,7 +41,7 @@ pub const NetPacket = extern struct {
     stream: bool, // was send as stream
     next: *NetPacket, // for internal use, should be NULL in public
 
-    pub fn read(file: std.fs.File, allocator: std.mem.Allocator) !?NetPacket {
+    pub fn read(file: File, allocator: std.mem.Allocator) !?NetPacket {
         var last_command_header: CommandHeader = undefined;
 
         while (true) {
@@ -72,7 +72,7 @@ pub const NetPacket = extern struct {
         // FIXME: undefined behavior!! not all fields of packets are initialized
         var packet: NetPacket = undefined;
         // TODO: figure out time in zig, fill recieved field
-        const packet_read_results = try readRawData(file, allocator);
+        const packet_read_results = try file.readRawData(allocator);
         allocator.free(packet_read_results);
 
         return packet;
@@ -86,7 +86,7 @@ const read_result = enum(u8) {
 };
 
 /// based on a demo command, return whether or not you should continue reading.
-fn performOneRead(file: std.fs.File, allocator: std.mem.Allocator, cmd: demo_messages) !read_result {
+fn performOneRead(file: File, allocator: std.mem.Allocator, cmd: demo_messages) !read_result {
     switch (cmd) {
         .dem_synctick => {
             // do NOTHING lol
@@ -101,17 +101,17 @@ fn performOneRead(file: std.fs.File, allocator: std.mem.Allocator, cmd: demo_mes
         },
         .dem_consolecmd => {
             log.debug("Reading console command...", .{});
-            const console_command = try readRawData(file, allocator);
+            const console_command = try file.readRawData(allocator);
             allocator.free(console_command);
         },
         .dem_datatables => {
             log.debug("Reading network datatables...", .{});
-            const network_datatables = try readRawData(file, allocator);
+            const network_datatables = try file.readRawData(allocator);
             allocator.free(network_datatables);
         },
         .dem_stringtables => {
             log.debug("Reading stringtables...", .{});
-            const stringtables = try readRawData(file, allocator);
+            const stringtables = try file.readRawData(allocator);
             allocator.free(stringtables);
         },
         .dem_usercmd => {

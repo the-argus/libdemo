@@ -1,4 +1,6 @@
 const std = @import("std");
+const File = @import("../io.zig").File;
+const log = std.log.scoped(.libdemo);
 
 ///
 /// The struct present at the start of every demo file.
@@ -45,6 +47,11 @@ pub const Header = extern struct {
             if (std.mem.indexOfScalar(u8, v, 0) == null)
                 return error.NoTerminator;
         }
+    }
+
+    pub fn read(file: File) !@This() {
+        log.debug("Reading demo header...", .{});
+        return try file.readObject(@This());
     }
 
     pub fn print(self: *const @This(), log_fn: *const fn (comptime []u8, anytype) void) void {
