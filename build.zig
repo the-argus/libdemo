@@ -18,8 +18,8 @@ pub fn build(b: *std.Build) !void {
 
     // tests -------------------------------------------------------------------
     const main_tests = b.addTest(.{
-        .name = "",
-        .root_source_file = .{ .path = "src/tests.zig" },
+        .name = "test-exe",
+        .root_source_file = .{ .path = "src/test-exe.zig" },
         .optimize = mode,
         .target = target,
     });
@@ -81,7 +81,7 @@ fn createStaticCLib(
     b.default_step.dependOn(&static_lib.step);
 
     const static_binding_test = b.addExecutable(.{
-        .name = "static-binding-test",
+        .name = "static_binding_test",
         .target = target,
         .optimize = mode,
     });
@@ -95,5 +95,6 @@ fn createStaticCLib(
     if (test_install) b.installArtifact(static_binding_test);
 
     const static_binding_test_run = b.addRunArtifact(static_binding_test);
+    static_binding_test_run.addArg("tests/demos/shortdemo.dem");
     test_step.dependOn(&static_binding_test_run.step);
 }

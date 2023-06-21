@@ -3,7 +3,7 @@ const testing = std.testing;
 const errors = @import("error.zig").DemoError;
 const print = std.debug.print();
 
-const readDemo = @import("src/read_dem.zig").readDemo;
+const readDemo = @import("read_dem.zig").readDemo;
 
 test "normal-demo" {
     try readDemo("tests/demos/shortdemo.dem");
