@@ -5,6 +5,8 @@
 ///
 const std = @import("std");
 const builtin = @import("builtin");
+const demo_api = @import("read_dem.zig");
+const File = @import("io.zig").File;
 
 const fcntl_header = @cImport({
     @cInclude("fcntl.h");
@@ -26,13 +28,25 @@ pub const std_options = struct {
     pub const logFn = @import("logging.zig").libdemo_logger;
 };
 
+const log = std.log.scoped(.libdemo);
+
 ///
 /// Read from a given demo file and print the json to the given output file
 /// descriptor.
 ///
 export fn demo_to_json(demo_file: *FILE, out: *FILE) callconv(.C) void {
-    const demo_file_valid = fcntl(fileno(demo_file), F_GETFD);
-    const out_file_valid = fcntl(fileno(out), F_GETFD);
-    _ = demo_file_valid;
-    _ = out_file_valid;
+    const demo_file_status = fcntl(fileno(demo_file), F_GETFD);
+    const out_file_status = fcntl(fileno(out), F_GETFD);
+    if (demo_file_status == -1 or out_file_status == -1) {
+        std.c.exit(1);
+    }
+    const wrapped_demo_file = File.wrap(demo_file);
+    demo_api.readAndValidateHeader(wrapped_demo_file) catch |err| {
+        log.err("Failed to read and validate demo header: {any}", .{err});
+        std.c.exit(1);
+    };
+    demo_api.readAllPackets(wrapped_demo_file) catch |err| {
+        log.err("Failed to read demo packets: {any}", .{err});
+        std.c.exit(1);
+    };
 }

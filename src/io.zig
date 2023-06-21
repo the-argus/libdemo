@@ -3,7 +3,7 @@
 ///
 const std = @import("std");
 const DemoError = @import("error.zig").DemoError;
-const log = std.log.scoped(.demoviewer);
+const log = std.log.scoped(.libdemo);
 const buildForC = @import("build-options").buildForC;
 
 ///
@@ -28,6 +28,7 @@ pub const File = struct {
             });
             const bytes_read = stdio_header.fread(&buf[0], @sizeOf(T), 1, self.inner);
             if (bytes_read < buf.len) {
+                log.debug("Error: {any} bytes read, expected {any}", .{ bytes_read, buf.len });
                 return DemoError.LibcFread;
             }
         } else {
@@ -62,7 +63,8 @@ pub const File = struct {
             const stdio_header = @cImport({
                 @cInclude("stdio.h");
             });
-            bytes_read = stdio_header.fread(&buf[0], @sizeOf(buf[0]), buf.len, self.inner);
+            // read buf.len bytes
+            bytes_read = stdio_header.fread(&buf[0], 1, buf.len, self.inner);
         } else {
             bytes_read = try self.inner.read(buf);
         }
@@ -83,7 +85,7 @@ fn filetype() type {
         const stdio_header = @cImport({
             @cInclude("stdio.h");
         });
-        return stdio_header.FILE;
+        return *stdio_header.FILE;
     } else {
         return std.fs.File;
     }
