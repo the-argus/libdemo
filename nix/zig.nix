@@ -15,8 +15,8 @@ stdenv.mkDerivation rec {
   src = fetchFromGitHub {
     owner = "ziglang";
     repo = pname;
-    rev = "128fd7dd02ae112cba68d0ad6cc40dc1ce8c34b1";
-    sha256 = "1ym6nkz2ahd65zxzxqs9jrncfqma57x7f22a0ls1s7nlaiq4blwy";
+    rev = "1e7dcaa3ae57294ab5998b44a8c13ccc5019e7ea";
+    sha256 = "0p0cy0yz409w4v8pjrggm819zrvhkw3rpkhh5bsg7dkrvgx77w9x";
   };
 
   nativeBuildInputs = [
