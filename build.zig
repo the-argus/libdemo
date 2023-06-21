@@ -1,6 +1,10 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
+///
+///Much of this is stolen from
+///https://github.com/mitchellh/libxev/blob/main/build.zig
+///
 pub fn build(b: *std.Build) !void {
     const test_install = b.option(
         bool,
@@ -25,7 +29,7 @@ pub fn build(b: *std.Build) !void {
     test_step.dependOn(&tests_run.step);
 
     // create and install the C static library
-    b.installArtifact(createStaticCLib(b, target, mode, test_step, test_install));
+    createStaticCLib(b, target, mode, test_step, test_install);
 
     // C Header installation
     const c_header = b.addInstallFileWithDir(
@@ -65,7 +69,7 @@ fn createStaticCLib(
     mode: std.builtin.Mode,
     test_step: *std.build.Step,
     test_install: bool,
-) *std.build.LibExeObjStep {
+) void {
     const static_lib = b.addStaticLibrary(.{
         .name = "demo",
         .root_source_file = .{ .path = "src/c_api.zig" },
@@ -92,6 +96,4 @@ fn createStaticCLib(
 
     const static_binding_test_run = b.addRunArtifact(static_binding_test);
     test_step.dependOn(&static_binding_test_run.step);
-
-    return static_lib;
 }
