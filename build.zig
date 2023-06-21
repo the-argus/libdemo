@@ -19,7 +19,7 @@ pub fn build(b: *std.Build) !void {
     // tests -------------------------------------------------------------------
     const main_tests = b.addTest(.{
         .name = "",
-        .root_source_file = .{ .path = "tests.zig" },
+        .root_source_file = .{ .path = "src/tests.zig" },
         .optimize = mode,
         .target = target,
     });

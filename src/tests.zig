@@ -1,6 +1,6 @@
 const std = @import("std");
 const testing = std.testing;
-const errors = @import("src/error.zig").DemoError;
+const errors = @import("error.zig").DemoError;
 const print = std.debug.print();
 
 const readDemo = @import("src/read_dem.zig").readDemo;
