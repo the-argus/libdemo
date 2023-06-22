@@ -57,7 +57,7 @@ pub const SimpleBuffer = struct {
 
     const ReadError = error{Overflow};
 
-    fn readBits(self: @This(), bits: u8) ReadError!u32 {
+    fn readBits(self: *@This(), bits: u8) ReadError!u32 {
         std.debug.assert(bits <= 32);
         if (self.getRemainingBits() < bits) {
             return ReadError.Overflow;
@@ -65,8 +65,9 @@ pub const SimpleBuffer = struct {
 
         // get an array of bytes which include all the bits we want to return
         const bytes: usize = @floatToInt(usize, std.math.ceil(@intToFloat(f32, bits) / 8.0));
+        const byte_containing_head = @floatToInt(usize, std.math.floor(@intToFloat(f32, self.head) / 8));
         const selection = block: {
-            const head_slice = self.slice();
+            const head_slice = self.data[byte_containing_head..];
             if (bytes > head_slice.len) {
                 return ReadError.Overflow;
             }
@@ -77,8 +78,8 @@ pub const SimpleBuffer = struct {
         var result: u32 = 0;
 
         // the head pointer but it's been shifted back to the beginning of its byte
-        var local_head: u32 = (selection.ptr - self.data.ptr) * 8;
-        const head_bit_from_byte_offset: u8 = local_head - self.head;
+        var local_head = byte_containing_head;
+        const head_bit_from_byte_offset = @intCast(u8, local_head - self.head);
         for (selection, 0..) |byte, byteindex| {
             // loop through all the bits in this byte
             for ([_]u8{ 0, 1, 2, 3, 4, 5, 6, 7 }) |bitindex| {
@@ -91,10 +92,10 @@ pub const SimpleBuffer = struct {
                 }
 
                 // otherwise mask out this bit and apply it to the result
-                const mask: u8 = (@intCast(u8, 1) << bitindex);
+                const mask: u8 = @intCast(u8, @intCast(u8, 1) << @intCast(u3, bitindex));
                 const bit_in_byte: u8 = mask & byte;
                 // could quit here if bit_in_byte is zero...
-                const bit_in_long: u32 = bit_in_byte << ((byteindex * 8) - head_bit_from_byte_offset);
+                const bit_in_long: u32 = bit_in_byte << @intCast(u3, ((byteindex * 8) - head_bit_from_byte_offset));
                 result &= bit_in_long;
 
                 local_head += 1;
@@ -105,18 +106,12 @@ pub const SimpleBuffer = struct {
         return result;
     }
 
-    /// Returns a slice of the array from the byte the head is in until data end
-    fn slice(self: @This()) []u8 {
-        const byte = std.math.floor(self.head / 8);
-        return self.data[byte..];
-    }
-
     fn getRemainingBits(self: @This()) u32 {
-        return (self.data.len * 8) - self.head;
+        return @intCast(u32, (self.data.len * 8) - self.head);
     }
 
-    fn moveHeadBy(self: @This(), increment: u32) void {
-        std.debug.assert(std.math.ceil((self.head + increment) / 8) < self.data.len);
+    fn moveHeadBy(self: *@This(), increment: u32) void {
+        std.debug.assert(std.math.ceil(@intToFloat(f32, self.head + increment) / 8) < @intToFloat(f32, self.data.len));
         self.head += increment;
     }
 };
