@@ -40,5 +40,6 @@ pub fn readAllPackets(file: File) !void {
         if (netpacket == null) {
             return;
         }
+        netpacket.free_with(allocator);
     }
 }

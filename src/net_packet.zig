@@ -30,16 +30,28 @@ pub const NetAddress = extern struct {
     port: u16,
 };
 
+// largely unused type which is meant to properly align the size of a network
+// packet
+pub const BitBufferDummy = extern struct {
+    data: ?*u8,
+    data_bytes: i32,
+    data_bits: i32,
+    current_bit: i32,
+    overflow: bool,
+    assert_on_overflow: bool,
+    debug_name: ?*u8,
+};
+
 pub const NetPacket = extern struct {
-    from: NetAddressType, // sender IP
-    source: i32, // received source
+    from: NetAddress, // sender IP
+    source: i32, // received source, UNUSED for demo
     received: f64, // received time
-    data: [*]u8, // pointer to raw packet data
-    message: NetAddress, // easy bitbuf data access
+    data: ?[*]u8, // pointer to raw packet data
+    message: BitBufferDummy, // easy bitbuf data access
     size: i32, // size in bytes
-    wiresize: i32, // size in bytes before decompression
-    stream: bool, // was send as stream
-    next: *NetPacket, // for internal use, should be NULL in public
+    wiresize: i32, // size in bytes before decompression UNUSED for demo
+    stream: bool, // was send as stream, UNUSED for demo
+    next: *NetPacket, // for internal use, should be NULL in public, UNUSED
 
     pub fn read(file: File, allocator: std.mem.Allocator) !?NetPacket {
         var last_command_header: CommandHeader = undefined;
@@ -70,12 +82,29 @@ pub const NetPacket = extern struct {
         cmd_info.local_view_angles_2.print("local view angles 2\t\t", &log.debug);
 
         // FIXME: undefined behavior!! not all fields of packets are initialized
-        var packet: NetPacket = undefined;
-        // TODO: figure out time in zig, fill recieved field
+        // probably easiest to just remove all the unused fields
+        var packet: NetPacket = .{ .from = .{ .type = NetAddressType.NA_LOOPBACK } };
         const packet_read_results = try file.readRawData(allocator);
-        allocator.free(packet_read_results);
+
+        packet.received = 0; // no need to record this for our usecase. in the tf2 client it sets this to the current time (when the demo is read)
+        packet.size = packet_read_results.len;
+        packet.message = BitBufferDummy{
+            .data = packet_read_results.ptr,
+            .data_bytes = packet_read_results.len,
+            .data_bits = 0, // don't care
+            .current_bit = 0,
+            .overflow = false,
+            .assert_on_overflow = false,
+            .debug_name = null,
+        };
 
         return packet;
+    }
+
+    pub fn free_with(self: @This(), allocator: std.mem.Allocator) void {
+        _ = allocator.free(self.data);
+        self.data = null;
+        self.message.data = null;
     }
 };
 
