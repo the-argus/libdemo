@@ -79,7 +79,7 @@ pub const SimpleBuffer = struct {
 
         // the head pointer but it's been shifted back to the beginning of its byte
         var local_head = byte_containing_head;
-        const head_bit_from_byte_offset = @intCast(u8, local_head - self.head);
+        const head_bit_from_byte_offset = @intCast(u8, self.head - local_head);
         for (selection, 0..) |byte, byteindex| {
             // loop through all the bits in this byte
             for ([_]u8{ 0, 1, 2, 3, 4, 5, 6, 7 }) |bitindex| {
