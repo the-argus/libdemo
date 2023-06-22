@@ -6,4 +6,5 @@ pub const DemoError = error{
     InvalidDemoMessage,
     NotEnoughMemory,
     FileDoesNotMatchPromised,
+    BadNetworkControlCommand,
 };
