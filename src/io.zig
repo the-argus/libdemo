@@ -6,6 +6,8 @@ const DemoError = @import("error.zig").DemoError;
 const log = std.log.scoped(.libdemo);
 const buildForC = @import("build-options").buildForC;
 
+const NET_MAX_PAYLOAD = 4000; // max bytes for readRawData
+
 ///
 /// This type provides a compile-time layer over std.fs.file and c's FILE*
 /// to abstract the differences.
@@ -53,7 +55,7 @@ pub const File = struct {
         const size = try self.readObject(i32);
 
         log.debug("Raw data expected size: {any}", .{size});
-        if (size < 0) {
+        if (size < 0 or size > NET_MAX_PAYLOAD) {
             return DemoError.Corruption;
         }
 
