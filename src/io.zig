@@ -26,7 +26,9 @@ pub const File = struct {
             const stdio_header = @cImport({
                 @cInclude("stdio.h");
             });
-            const bytes_read = stdio_header.fread(&buf[0], @sizeOf(T), 1, self.inner);
+            // read in separate bytes * the size of T instead of 1xT
+            // so that bytes_read can be bytes_read instead of T_read
+            const bytes_read = stdio_header.fread(&buf[0], 1, @sizeOf(T), self.inner);
             if (bytes_read < buf.len) {
                 log.debug("Error: {any} bytes read, expected {any}", .{ bytes_read, buf.len });
                 return DemoError.LibcFread;
