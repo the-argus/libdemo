@@ -36,10 +36,10 @@ pub fn readAllPackets(file: File) !void {
     const allocator = gpa.allocator();
 
     while (true) {
-        const netpacket = try NetPacket.read(file, allocator);
+        var netpacket = try NetPacket.read(file, allocator);
         if (netpacket == null) {
             return;
         }
-        netpacket.free_with(allocator);
+        netpacket.?.free_with(allocator);
     }
 }
