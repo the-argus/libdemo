@@ -5,7 +5,7 @@ const NetPacket = @import("net_packet.zig").NetPacket;
 
 const log = std.log.scoped(.libdemo);
 
-test {
+test "ShortDemo" {
     try readDemo("tests/demos/shortdemo.dem");
 }
 

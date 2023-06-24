@@ -78,12 +78,7 @@ pub const NetPacket = extern struct {
         const cmd_info = try CommandInfo.read(file);
         _ = try SequenceInfo.read(file);
 
-        cmd_info.view_origin.print("view origin\t\t", &log.debug);
-        cmd_info.view_origin_2.print("view origin 2\t\t", &log.debug);
-        cmd_info.view_angles.print("view angles\t\t", &log.debug);
-        cmd_info.view_angles_2.print("view angles 2\t\t", &log.debug);
-        cmd_info.local_view_angles.print("local view angles\t\t", &log.debug);
-        cmd_info.local_view_angles_2.print("local view angles 2\t\t", &log.debug);
+        cmd_info.print(&log.debug);
 
         // FIXME: undefined behavior!! not all fields of packets are initialized
         // probably easiest to just remove all the unused fields

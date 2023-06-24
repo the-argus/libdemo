@@ -22,4 +22,13 @@ pub const CommandInfo = extern struct {
         log.debug("Reading command info...", .{});
         return try file.readObject(@This());
     }
+
+    pub fn print(self: @This(), log_fn: *const fn (comptime []u8, anytype) void) void {
+        self.view_origin.print("view origin\t\t", log_fn);
+        self.view_origin_2.print("view origin 2\t\t", log_fn);
+        self.view_angles.print("view angles\t\t", log_fn);
+        self.view_angles_2.print("view angles 2\t\t", log_fn);
+        self.local_view_angles.print("local view angles\t\t", log_fn);
+        self.local_view_angles_2.print("local view angles 2\t\t", log_fn);
+    }
 };
