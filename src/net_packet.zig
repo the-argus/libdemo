@@ -33,13 +33,8 @@ pub const NetAddress = struct {
 
 pub const NetPacket = struct {
     from: NetAddress, // sender IP
-    // source: i32, // received source, UNUSED for demo
-    // received: f64 = 0, // received time
     data: []u8, // raw packet data
     message: SimpleBuffer, // easy bitbuf data access
-    // wiresize: i32, // size in bytes before decompression UNUSED for demo
-    // stream: bool, // was send as stream, UNUSED for demo
-    // next: *NetPacket, // for internal use, should be NULL in public, UNUSED
 
     pub fn read(file: File, allocator: std.mem.Allocator) !?NetPacket {
         var last_command_header: CommandHeader = undefined;
