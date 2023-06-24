@@ -33,7 +33,6 @@ pub const NetAddress = struct {
 
 pub const NetPacket = struct {
     from: NetAddress, // sender IP
-    data: []u8, // raw packet data
     message: SimpleBuffer, // easy bitbuf data access
 
     pub fn read(file: File, allocator: std.mem.Allocator) !?NetPacket {
@@ -74,7 +73,7 @@ pub const NetPacket = struct {
     }
 
     pub fn free_with(self: *@This(), allocator: std.mem.Allocator) void {
-        _ = allocator.free(self.data);
+        _ = allocator.free(self.message.data);
     }
 };
 
