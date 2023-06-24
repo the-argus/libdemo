@@ -106,10 +106,6 @@ pub const SimpleBuffer = struct {
 
     fn readBits(self: *@This(), bits: u8) ReadError!u32 {
         log.debug("readBits called. Head pointer at {any} and {any} bits requested.", .{ self.head, bits });
-        log.debug("First 2 bytes of data:", .{});
-        for (0..2) |index| {
-            log.debug("{any}", .{self.data[index]});
-        }
         std.debug.assert(bits <= 32);
         if (self.getRemainingBits() < bits) {
             return ReadError.Overflow;
@@ -134,7 +130,7 @@ pub const SimpleBuffer = struct {
         const head_bit_from_byte_offset = @intCast(u8, self.head - local_head);
         for (selection, 0..) |byte, byteindex| {
             // loop through all the bits in this byte
-            for ([_]u8{ 0, 1, 2, 3, 4, 5, 6, 7 }) |bitindex| {
+            for (0..8) |bitindex| {
                 // skip the bit if its before the read head
                 // FIXME: this is prone to off-by-one errors and defeats the
                 // purpose of range-based for loops
