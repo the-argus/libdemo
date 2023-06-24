@@ -69,6 +69,8 @@ pub const NetPacket = struct {
         const packet_read_results = try file.readRawData(allocator);
         packet.message = SimpleBuffer.wrap(packet_read_results);
 
+        try packet.message.processMessages();
+
         return packet;
     }
 
