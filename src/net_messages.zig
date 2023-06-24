@@ -42,6 +42,13 @@ pub const SimpleBuffer = struct {
     data: []const u8,
     head: u32,
 
+    pub fn wrap(raw: []const u8) @This() {
+        return .{
+            .data = raw,
+            .head = 0,
+        };
+    }
+
     pub fn processMessages(self: @This()) void {
         while (true) {
             _ = self.readBits(NETMSG_TYPE_BITS) catch |err| {

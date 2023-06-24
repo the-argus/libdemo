@@ -4,15 +4,12 @@
 /// packet consists of commands. Different commands and command-related types
 /// such as the command header are found in the ``types`` subdir.
 ///
-
-// TODO: stop using extern for most of these types and zig-ify them, because
-// they aren't actually present in the demo files, they're just copies of the
-// types used in the tf2 codebase
 const std = @import("std");
 const CommandHeader = @import("types/command_header.zig").CommandHeader;
 const CommandInfo = @import("types/command_info.zig").CommandInfo;
 const SequenceInfo = @import("types/sequence_info.zig").SequenceInfo;
 const UserCommand = @import("types/user_command.zig").UserCommand;
+const SimpleBuffer = @import("net_messages.zig").SimpleBuffer;
 const File = @import("io.zig").File;
 const demo_messages = @import("types/demo_messages.zig").demo_messages;
 const log = std.log.scoped(.libdemo);
@@ -28,34 +25,21 @@ pub const NetAddressType = enum(u8) {
     NA_IP,
 };
 
-pub const NetAddress = extern struct {
+pub const NetAddress = struct {
     type: NetAddressType,
     ip: [4]u8,
     port: u16,
 };
 
-// largely unused type which is meant to properly align the size of a network
-// packet
-pub const BitBufferDummy = extern struct {
-    data: ?[*]u8,
-    data_bytes: i32,
-    data_bits: i32,
-    current_bit: i32,
-    overflow: bool,
-    assert_on_overflow: bool,
-    debug_name: ?*u8,
-};
-
-pub const NetPacket = extern struct {
+pub const NetPacket = struct {
     from: NetAddress, // sender IP
-    source: i32, // received source, UNUSED for demo
-    received: f64, // received time
-    data: ?[*]u8, // pointer to raw packet data
-    message: BitBufferDummy, // easy bitbuf data access
-    size: i32, // size in bytes
-    wiresize: i32, // size in bytes before decompression UNUSED for demo
-    stream: bool, // was send as stream, UNUSED for demo
-    next: *NetPacket, // for internal use, should be NULL in public, UNUSED
+    // source: i32, // received source, UNUSED for demo
+    // received: f64 = 0, // received time
+    data: []u8, // raw packet data
+    message: SimpleBuffer, // easy bitbuf data access
+    // wiresize: i32, // size in bytes before decompression UNUSED for demo
+    // stream: bool, // was send as stream, UNUSED for demo
+    // next: *NetPacket, // for internal use, should be NULL in public, UNUSED
 
     pub fn read(file: File, allocator: std.mem.Allocator) !?NetPacket {
         var last_command_header: CommandHeader = undefined;
@@ -83,37 +67,19 @@ pub const NetPacket = extern struct {
         // FIXME: undefined behavior!! not all fields of packets are initialized
         // probably easiest to just remove all the unused fields
         var packet: NetPacket = undefined;
-        packet.from = block: {
-            var netaddr: NetAddress = undefined;
-            netaddr.type = NetAddressType.NA_LOOPBACK;
-            netaddr.ip = undefined;
-            netaddr.port = undefined;
-            break :block netaddr;
+        packet.from = .{
+            .type = NetAddressType.NA_LOOPBACK,
+            .ip = undefined,
+            .port = undefined,
         };
         const packet_read_results = try file.readRawData(allocator);
-
-        packet.received = 0; // no need to record this for our usecase. in the tf2 client it sets this to the current time (when the demo is read)
-        packet.size = @intCast(i32, packet_read_results.len);
-        packet.message = BitBufferDummy{
-            .data = packet_read_results.ptr,
-            .data_bytes = @intCast(i32, packet_read_results.len),
-            .data_bits = 0, // don't care
-            .current_bit = 0,
-            .overflow = false,
-            .assert_on_overflow = false,
-            .debug_name = null,
-        };
+        packet.message = SimpleBuffer.wrap(packet_read_results);
 
         return packet;
     }
 
     pub fn free_with(self: *@This(), allocator: std.mem.Allocator) void {
-        var freeable: []u8 = undefined;
-        freeable.ptr = self.data.?;
-        freeable.len = @intCast(usize, self.size);
-        _ = allocator.free(freeable);
-        self.data = null;
-        self.message.data = null;
+        _ = allocator.free(self.data);
     }
 };
 
