@@ -55,7 +55,7 @@ pub const File = struct {
         const size = try self.readObject(i32);
 
         log.debug("Raw data expected size: {any}", .{size});
-        if (size < 0 or size > NET_MAX_PAYLOAD) {
+        if (size < 0) {
             return DemoError.Corruption;
         }
 
