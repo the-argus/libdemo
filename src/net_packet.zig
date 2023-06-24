@@ -113,7 +113,10 @@ pub const NetPacket = extern struct {
     }
 
     pub fn free_with(self: *@This(), allocator: std.mem.Allocator) void {
-        _ = allocator.free(self.data.?);
+        var freeable: []u8 = undefined;
+        freeable.ptr = self.data.?;
+        freeable.len = @intCast(usize, self.size);
+        _ = allocator.free(freeable);
         self.data = null;
         self.message.data = null;
     }
