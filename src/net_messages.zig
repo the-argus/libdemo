@@ -125,25 +125,40 @@ pub const SimpleBuffer = struct {
         var result: u32 = 0;
 
         // the head pointer but it's been shifted back to the beginning of its byte
-        var local_head = byte_containing_head;
-        const head_bit_from_byte_offset = @intCast(u8, self.head - local_head);
-        for (selection, 0..) |byte, byteindex| {
+        var local_head = byte_containing_head * 8;
+        const read_offset = self.head - local_head;
+        std.debug.assert(read_offset < 8 and read_offset >= 0);
+        for (selection, 0..) |byte, byteindex| outer: {
             // loop through all the bits in this byte
             for (0..8) |bitindex| {
                 // skip the bit if its before the read head
-                // FIXME: this is prone to off-by-one errors and defeats the
-                // purpose of range-based for loops
-                if (local_head < self.head or local_head >= self.head + bits) {
+                // FIXME: these if statements are prone to off-by-one errors
+                // and defeat the purpose of range-based for loops
+                if (local_head < self.head) {
                     local_head += 1;
                     continue;
                 }
+                if (local_head >= self.head + bits) {
+                    break :outer;
+                }
+                std.debug.print("Attempting to read bit {any} from the following byte: 0b{b}\n", .{ bitindex, byte });
 
-                // otherwise mask out this bit and apply it to the result
-                const mask: u8 = @intCast(u8, @intCast(u8, 1) << @intCast(u3, bitindex));
-                const bit_in_byte: u8 = mask & byte;
-                // could quit here if bit_in_byte is zero...
-                const bit_in_long: u32 = bit_in_byte << @intCast(u3, ((byteindex * 8) - head_bit_from_byte_offset));
-                result &= bit_in_long;
+                // which bit in the output we should be writing to
+                const output_bitindex = local_head - self.head;
+                std.debug.print("Output bit index: {any}\n", .{output_bitindex});
+                const output_mask: u32 = @intCast(u32, 1) << @intCast(u3, output_bitindex);
+                std.debug.print("Output mask: 0b{b}\n", .{output_mask});
+
+                // take the current byte, put it in a u32, and then shift it so
+                // that the bit we want to write is at the same position as
+                // where we want it in the output
+                const byte_at_beginning_of_long = @intCast(u32, byte);
+                const byte_in_long = byte_at_beginning_of_long << @intCast(u3, byteindex * 8);
+                const aligned_bit = byte_in_long >> @intCast(u3, read_offset);
+                const final_bit = output_mask & aligned_bit;
+
+                std.debug.print("ORing final bit 0b{b} and result 0b{b}\n", .{ final_bit, result });
+                result |= final_bit;
 
                 local_head += 1;
             }
@@ -157,7 +172,7 @@ pub const SimpleBuffer = struct {
         return .{
             .data = block: {
                 var result: []const u8 = undefined;
-                result.ptr = @ptrCast([*]const u8, &data);
+                result.ptr = @ptrCast([*]const u8, data);
                 result.len = @sizeOf(@TypeOf(data));
                 break :block result;
             },
@@ -241,25 +256,30 @@ fn dWordSwap(val: anytype) @TypeOf(val) {
     return *@ptrCast(*@TypeOf(val), &temp);
 }
 
-test "SimpleBufferBitTest" {
+test "SimpleBitBufferTest" {
     const data: u32 = 0b10101010100011111;
     var bitbuf = SimpleBuffer.wrapU32AsBytes(&data);
-    const first_3_bits = bitbuf.readBits(3);
-    const next_4_bits = bitbuf.readBits(4);
-    const next_byte = bitbuf.readBits(8);
-    const last_two_bits = bitbuf.readBits(2);
-    try std.testing.expectEqual(first_3_bits, @intCast(u32, 0b0111));
-    try std.testing.expectEqual(next_4_bits, @intCast(u32, 0b0011));
-    try std.testing.expectEqual(next_byte, @intCast(u32, 0b10101010));
-    try std.testing.expectEqual(last_two_bits, @intCast(u32, 0b10));
+    const expected_first_byte = @intCast(u32, 0b00011111);
+    std.debug.print("\nFirst byte of bitbuf is 0b{b} and expected is 0b{b}\n", .{ bitbuf.data[0], expected_first_byte });
+    try std.testing.expectEqual(expected_first_byte, bitbuf.data[0]);
+    const first_3_bits = try bitbuf.readBits(3);
+    try std.testing.expectEqual(@intCast(u32, 0b0111), first_3_bits);
+    const next_4_bits = try bitbuf.readBits(4);
+    try std.testing.expectEqual(@intCast(u32, 0b0011), next_4_bits);
+    const next_byte = try bitbuf.readBits(8);
+    try std.testing.expectEqual(@intCast(u32, 0b10101010), next_byte);
+    const last_two_bits = try bitbuf.readBits(2);
+    try std.testing.expectEqual(@intCast(u32, 0b10), last_two_bits);
 }
 
+// got integer overflow one time with these inputs so it's replicated here as a
+// test.
 test "IntegerOverflow" {
     // this is 135 2 in bytes
     const data: u32 = 0b1000011100000010;
     var bitbuf = SimpleBuffer.wrapU32AsBytes(&data);
-    const first_6_bits = bitbuf.readBits(6);
-    const next_6_bits = bitbuf.readBits(6);
-    try std.testing.expectEqual(first_6_bits, @intCast(u32, 0b000010));
-    try std.testing.expectEqual(next_6_bits, @intCast(u32, 0b011100));
+    const first_6_bits = try bitbuf.readBits(6);
+    try std.testing.expectEqual(@intCast(u32, 0b000010), first_6_bits);
+    const next_6_bits = try bitbuf.readBits(6);
+    try std.testing.expectEqual(@intCast(u32, 0b011100), next_6_bits);
 }
