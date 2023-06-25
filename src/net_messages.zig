@@ -47,8 +47,7 @@ pub const SimpleBuffer = struct {
                 return;
             };
 
-            const should_continue = try self.processControlMessage(netcode);
-            if (!should_continue) {
+            if (!try self.processControlMessage(netcode)) {
                 // disconnect
                 return;
             }
