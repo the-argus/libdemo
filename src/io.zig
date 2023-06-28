@@ -96,11 +96,17 @@ fn filetype() type {
     }
 }
 
+pub const FixedBufferAsReader = std.io.Reader(
+    *std.io.FixedBufferStream([]const u8),
+    std.io.FixedBufferStream([]const u8).ReadError,
+    std.io.FixedBufferStream([]const u8).read,
+);
+
 pub const MemoryBitReader = std.io.BitReader(
     // NOTE: always use host endian, may be better to always assume
     // TF2 files are in little endian
     builtin.cpu.arch.endian(),
-    std.io.Reader(*std.io.FixedBufferStream([]const u8), std.io.FixedBufferStream([]const u8).ReadError, std.io.FixedBufferStream([]const u8).read),
+    FixedBufferAsReader,
 );
 pub fn BitReader(data: []const u8) MemoryBitReader {
     var fixedBufferReader = std.io.fixedBufferStream(data);
