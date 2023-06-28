@@ -75,7 +75,7 @@ pub const NetPacket = struct {
     }
 
     pub fn free_with(self: *@This(), allocator: std.mem.Allocator) void {
-        _ = allocator.free(self.message.data);
+        _ = allocator.free(self.message.raw_data);
     }
 };
 

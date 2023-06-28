@@ -2,6 +2,7 @@
 /// I/O related utilities
 ///
 const std = @import("std");
+const builtin = @import("builtin");
 const DemoError = @import("error.zig").DemoError;
 const log = std.log.scoped(.libdemo);
 const buildForC = @import("build-options").buildForC;
@@ -93,4 +94,16 @@ fn filetype() type {
     } else {
         return std.fs.File;
     }
+}
+
+pub const MemoryBitReader = std.io.BitReader(
+    // NOTE: always use host endian, may be better to always assume
+    // TF2 files are in little endian
+    builtin.cpu.arch.endian(),
+    std.io.Reader(*std.io.FixedBufferStream([]const u8), std.io.FixedBufferStream([]const u8).ReadError, std.io.FixedBufferStream([]const u8).read),
+);
+pub fn BitReader(data: []const u8) MemoryBitReader {
+    var fixedBufferReader = std.io.fixedBufferStream(data);
+    var reader = fixedBufferReader.reader();
+    return MemoryBitReader.init(reader);
 }
