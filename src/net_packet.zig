@@ -9,7 +9,7 @@ const CommandHeader = @import("types/command_header.zig").CommandHeader;
 const CommandInfo = @import("types/command_info.zig").CommandInfo;
 const SequenceInfo = @import("types/sequence_info.zig").SequenceInfo;
 const UserCommand = @import("types/user_command.zig").UserCommand;
-const SimpleBuffer = @import("net_messages.zig").SimpleBuffer;
+const NetworkBitBuffer = @import("net_messages.zig").NetworkBitBuffer;
 const File = @import("io.zig").File;
 const demo_messages = @import("types/demo_messages.zig").demo_messages;
 const log = std.log.scoped(.libdemo);
@@ -33,7 +33,7 @@ pub const NetAddress = struct {
 
 pub const NetPacket = struct {
     from: NetAddress, // sender IP
-    message: SimpleBuffer, // easy bitbuf data access
+    message: NetworkBitBuffer, // easy bitbuf data access
 
     pub fn read(file: File, allocator: std.mem.Allocator) !?NetPacket {
         var last_command_header: CommandHeader = undefined;
@@ -67,7 +67,7 @@ pub const NetPacket = struct {
             .port = undefined,
         };
         const packet_read_results = try file.readRawData(allocator);
-        packet.message = SimpleBuffer.wrap(allocator, packet_read_results) catch |err| {
+        packet.message = NetworkBitBuffer.wrap(allocator, packet_read_results) catch |err| {
             allocator.free(packet_read_results);
             return err;
         };

@@ -17,23 +17,11 @@ pub const CommandHeader = extern struct {
         result.message = .dem_signon;
         // first read into cmd
         {
-            const buf = try file.readObject([1]u8);
+            const buf = try file.readObject(u8);
 
-            // get actual demo value
-            var valid_demo_message = false;
-            // NOTE: this could be @intToEnum. it would be much
-            // faster, although it would cause the program to panic when reading
-            // invalid demos.
-            for (std.enums.values(demo_messages)) |message_type| {
-                if (buf[0] == @enumToInt(message_type)) {
-                    result.message = message_type;
-                    valid_demo_message = true;
-                    break;
-                }
-            }
-            if (!valid_demo_message) {
+            result.message = std.meta.intToEnum(demo_messages, buf) catch {
                 return DemoError.InvalidDemoMessage;
-            }
+            };
             if (result.message == .dem_stop) {
                 log.info("Demo stopping code reached, exiting.", .{});
                 std.os.exit(0);
