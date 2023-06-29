@@ -2,13 +2,13 @@ pub const Messages = struct {
     pub const bits = 6; // bits in a network message
     pub const Type = u6; // should be the same bits as above
 
-    pub const MessageTypes = enum {
+    pub const MessageCategories = enum {
         NET,
         SVC,
         CLC,
     };
 
-    pub fn getType(message: Messages.all) MessageTypes {
+    pub fn getCategory(message: Messages.all) MessageCategories {
         const num = @enumToInt(message);
         if (num <= 6) {
             return .NET;
@@ -28,7 +28,7 @@ pub const Messages = struct {
     pub const all = enum(Messages.Type) {
         /// check whether a message is NOP, DISCONNECT, or FILE
         pub inline fn isControlMessage(self: Messages.all) bool {
-            return @enumToInt(self) < 2;
+            return @enumToInt(self) <= 2;
         }
         // NET
         NOP = 0,
