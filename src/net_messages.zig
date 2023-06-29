@@ -35,11 +35,8 @@ pub const SimpleBuffer = struct {
     stream: *std.io.FixedBufferStream([]const u8),
     raw_data: []const u8,
 
-    pub fn wrap(allocator: std.mem.Allocator, raw: []const u8) @This() {
-        var stream = @ptrCast(
-            *std.io.FixedBufferStream([]const u8),
-            (try allocator.alloc(std.io.FixedBufferStream([]const u8), 1)),
-        );
+    pub fn wrap(allocator: std.mem.Allocator, raw: []const u8) !@This() {
+        var stream = try allocator.create(std.io.FixedBufferStream([]const u8));
         stream.* = std.io.fixedBufferStream(raw);
         var reader = MemoryBitReader.init(stream.*.reader());
         return .{
@@ -50,7 +47,7 @@ pub const SimpleBuffer = struct {
     }
 
     pub fn free_with(self: @This(), allocator: std.mem.Allocator) void {
-        _ = allocator.free(self.stream);
+        _ = allocator.destroy(self.stream);
         _ = allocator.free(self.raw_data);
     }
 
@@ -117,7 +114,7 @@ pub const SimpleBuffer = struct {
         return DemoError.BadNetworkControlCommand;
     }
 
-    fn wrapU32AsBytes(allocator: std.mem.Allocator, data: *const u32) SimpleBuffer {
+    fn wrapU32AsBytes(allocator: std.mem.Allocator, data: *const u32) !@This() {
         var slice = block: {
             var result: []const u8 = undefined;
             result.ptr = @ptrCast([*]const u8, data);
@@ -229,7 +226,7 @@ fn dWordSwap(val: anytype) @TypeOf(val) {
 //
 test "SimpleBitBufferTest" {
     const data: u32 = 0b10101010100011111;
-    var bitbuf = SimpleBuffer.wrapU32AsBytes(std.testing.allocator_instance, &data);
+    var bitbuf = try SimpleBuffer.wrapU32AsBytes(std.testing.allocator_instance, &data);
     const expected_first_byte = @intCast(u32, 0b00011111);
     std.debug.print("\nFirst byte of bitbuf is 0b{b} and expected is 0b{b}\n", .{ bitbuf.raw_data[0], expected_first_byte });
     try std.testing.expectEqual(expected_first_byte, bitbuf.raw_data[0]);
@@ -246,7 +243,7 @@ test "SimpleBitBufferTest" {
 test "BitBufferTestSixes" {
     // this is 135 2 in bytes
     const data: u32 = 0b1000011100000010;
-    var bitbuf = SimpleBuffer.wrapU32AsBytes(std.testing.allocator_instance, &data);
+    var bitbuf = try SimpleBuffer.wrapU32AsBytes(std.testing.allocator_instance, &data);
     const first_6_bits = try bitbuf.readBits(6);
     try std.testing.expectEqual(@intCast(u32, 0b000010), first_6_bits);
     const next_6_bits = try bitbuf.readBits(6);

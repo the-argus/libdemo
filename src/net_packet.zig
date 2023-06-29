@@ -67,7 +67,7 @@ pub const NetPacket = struct {
             .port = undefined,
         };
         const packet_read_results = try file.readRawData(allocator);
-        packet.message = SimpleBuffer.wrap(allocator, packet_read_results);
+        packet.message = try SimpleBuffer.wrap(allocator, packet_read_results);
 
         try packet.message.processMessages();
 
