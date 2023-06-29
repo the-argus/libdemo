@@ -67,9 +67,15 @@ pub const NetPacket = struct {
             .port = undefined,
         };
         const packet_read_results = try file.readRawData(allocator);
-        packet.message = try SimpleBuffer.wrap(allocator, packet_read_results);
+        packet.message = SimpleBuffer.wrap(allocator, packet_read_results) catch |err| {
+            allocator.free(packet_read_results);
+            return err;
+        };
 
-        try packet.message.processMessages();
+        packet.message.processMessages() catch |err| {
+            packet.free_with(allocator);
+            return err;
+        };
 
         return packet;
     }
