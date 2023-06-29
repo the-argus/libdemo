@@ -108,7 +108,6 @@ pub const SimpleBuffer = struct {
                 return true;
             },
         }
-        return DemoError.BadNetworkControlCommand;
     }
 
     fn wrapU32AsBytes(allocator: std.mem.Allocator, data: *const u32) !@This() {
