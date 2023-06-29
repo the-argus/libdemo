@@ -46,6 +46,9 @@ pub const SimpleBuffer = struct {
     pub fn processMessages(self: *@This()) !void {
         while (true) {
             const cmd = @intCast(netmsg.Type, self.readBits(netmsg.bits) catch |err| {
+                if (err == ReadError.EndOfBuffer) {
+                    return;
+                }
                 warnBitReaderError(err);
                 return DemoError.Corruption;
             });
