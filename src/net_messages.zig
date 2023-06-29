@@ -93,7 +93,17 @@ pub const SimpleBuffer = struct {
             },
             .FILE => {
                 var string_buffer: [1024]u8 = undefined;
-                const transfer_id: u32 = try self.readBits(32);
+                const transfer_id: u32 = self.readBits(32) catch |err| {
+                    switch (err) {
+                        ReadError.EndOfBuffer => {
+                            log.warn("End of buffer reached when trying to read file. Ending control message read.", .{});
+                            return false;
+                        },
+                        else => {
+                            return err;
+                        },
+                    }
+                };
 
                 const string_slice = self.readStringInto(&string_buffer) catch |err| {
                     warnBitReaderError(err);
@@ -228,8 +238,9 @@ fn dWordSwap(val: anytype) @TypeOf(val) {
 // stdlib one works the way I expect.
 //
 test "SimpleBitBufferTest" {
+    const ally = std.testing.allocator;
     const data: u32 = 0b10101010100011111;
-    var bitbuf = try SimpleBuffer.wrapU32AsBytes(std.testing.allocator, &data);
+    var bitbuf = try SimpleBuffer.wrapU32AsBytes(ally, &data);
     const expected_first_byte = @intCast(u32, 0b00011111);
     std.debug.print("\nFirst byte of bitbuf is 0b{b} and expected is 0b{b}\n", .{ bitbuf.raw_data[0], expected_first_byte });
     try std.testing.expectEqual(expected_first_byte, bitbuf.raw_data[0]);
@@ -241,14 +252,17 @@ test "SimpleBitBufferTest" {
     try std.testing.expectEqual(@intCast(u32, 0b10101010), next_byte);
     const last_two_bits = try bitbuf.readBits(2);
     try std.testing.expectEqual(@intCast(u32, 0b10), last_two_bits);
+    bitbuf.free_with(ally);
 }
 
 test "BitBufferTestSixes" {
+    const ally = std.testing.allocator;
     // this is 135 2 in bytes
     const data: u32 = 0b1000011100000010;
-    var bitbuf = try SimpleBuffer.wrapU32AsBytes(std.testing.allocator, &data);
+    var bitbuf = try SimpleBuffer.wrapU32AsBytes(ally, &data);
     const first_6_bits = try bitbuf.readBits(6);
     try std.testing.expectEqual(@intCast(u32, 0b000010), first_6_bits);
     const next_6_bits = try bitbuf.readBits(6);
     try std.testing.expectEqual(@intCast(u32, 0b011100), next_6_bits);
+    bitbuf.free_with(ally);
 }
