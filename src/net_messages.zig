@@ -138,7 +138,7 @@ pub const SimpleBuffer = struct {
     pub fn readBits(self: *@This(), bits: usize) !u32 {
         var bits_read: usize = 0;
         const output = self.reader.readBits(u32, bits, &bits_read);
-        if (bits_read == 0) {
+        if (bits_read < bits) {
             return ReadError.EndOfBuffer;
         }
         return output;
