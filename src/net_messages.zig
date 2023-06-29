@@ -120,11 +120,15 @@ pub const SimpleBuffer = struct {
         return @This().wrap(allocator, slice);
     }
 
-    pub const ReadError = error{ OutputBufferTooSmall, Overflow };
+    pub const ReadError = error{ OutputBufferTooSmall, Overflow, EndOfBuffer };
 
     pub fn readBits(self: *@This(), bits: usize) !u32 {
         var bits_read: usize = 0;
-        return self.reader.readBits(u32, bits, &bits_read);
+        const output = self.reader.readBits(u32, bits, &bits_read);
+        if (bits_read == 0) {
+            return ReadError.EndOfBuffer;
+        }
+        return output;
     }
 
     /// Reads a series of bytes until reaching a 0 byte. Sends them all to an
