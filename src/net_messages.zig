@@ -4,6 +4,7 @@
 /// in the tf2 source code
 ///
 const std = @import("std");
+const builtin = @import("builtin");
 const DemoError = @import("error.zig").DemoError;
 const log = std.log.scoped(.libdemo);
 const io = @import("io.zig");
@@ -17,15 +18,40 @@ const netcodes = enum(NETMSG_TYPE) {
     FILE = 2,
 };
 
+const FixedBufferStreamReader = std.io.Reader(
+    *std.io.FixedBufferStream([]const u8),
+    std.io.FixedBufferStream([]const u8).ReadError,
+    std.io.FixedBufferStream([]const u8).read,
+);
+const MemoryBitReader = std.io.BitReader(
+    // NOTE: always use host endian, may be better to always assume
+    // TF2 files are in little endian
+    builtin.cpu.arch.endian(),
+    FixedBufferStreamReader,
+);
+
 pub const SimpleBuffer = struct {
-    reader: io.MemoryBitReader,
+    reader: MemoryBitReader,
+    stream: *std.io.FixedBufferStream([]const u8),
     raw_data: []const u8,
 
-    pub fn wrap(raw: []const u8) @This() {
+    pub fn wrap(allocator: std.mem.Allocator, raw: []const u8) @This() {
+        var stream = @ptrCast(
+            *std.io.FixedBufferStream([]const u8),
+            (try allocator.alloc(std.io.FixedBufferStream([]const u8), 1)),
+        );
+        stream.* = std.io.fixedBufferStream(raw);
+        var reader = MemoryBitReader.init(stream.*.reader());
         return .{
-            .reader = io.BitReader(raw),
+            .reader = reader,
+            .stream = stream,
             .raw_data = raw,
         };
+    }
+
+    pub fn free_with(self: @This(), allocator: std.mem.Allocator) void {
+        _ = allocator.free(self.stream);
+        _ = allocator.free(self.raw_data);
     }
 
     pub fn processMessages(self: *@This()) !void {
@@ -91,17 +117,14 @@ pub const SimpleBuffer = struct {
         return DemoError.BadNetworkControlCommand;
     }
 
-    fn wrapU32AsBytes(data: *const u32) SimpleBuffer {
+    fn wrapU32AsBytes(allocator: std.mem.Allocator, data: *const u32) SimpleBuffer {
         var slice = block: {
             var result: []const u8 = undefined;
             result.ptr = @ptrCast([*]const u8, data);
             result.len = @sizeOf(@TypeOf(data));
             break :block result;
         };
-        return .{
-            .raw_data = slice,
-            .reader = io.BitReader(slice),
-        };
+        return @This().wrap(allocator, slice);
     }
 
     pub const ReadError = error{ OutputBufferTooSmall, Overflow };
@@ -206,7 +229,7 @@ fn dWordSwap(val: anytype) @TypeOf(val) {
 //
 test "SimpleBitBufferTest" {
     const data: u32 = 0b10101010100011111;
-    var bitbuf = SimpleBuffer.wrapU32AsBytes(&data);
+    var bitbuf = SimpleBuffer.wrapU32AsBytes(std.testing.allocator_instance, &data);
     const expected_first_byte = @intCast(u32, 0b00011111);
     std.debug.print("\nFirst byte of bitbuf is 0b{b} and expected is 0b{b}\n", .{ bitbuf.raw_data[0], expected_first_byte });
     try std.testing.expectEqual(expected_first_byte, bitbuf.raw_data[0]);
@@ -223,7 +246,7 @@ test "SimpleBitBufferTest" {
 test "BitBufferTestSixes" {
     // this is 135 2 in bytes
     const data: u32 = 0b1000011100000010;
-    var bitbuf = SimpleBuffer.wrapU32AsBytes(&data);
+    var bitbuf = SimpleBuffer.wrapU32AsBytes(std.testing.allocator_instance, &data);
     const first_6_bits = try bitbuf.readBits(6);
     try std.testing.expectEqual(@intCast(u32, 0b000010), first_6_bits);
     const next_6_bits = try bitbuf.readBits(6);

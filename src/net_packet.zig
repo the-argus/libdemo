@@ -67,7 +67,7 @@ pub const NetPacket = struct {
             .port = undefined,
         };
         const packet_read_results = try file.readRawData(allocator);
-        packet.message = SimpleBuffer.wrap(packet_read_results);
+        packet.message = SimpleBuffer.wrap(allocator, packet_read_results);
 
         try packet.message.processMessages();
 
@@ -75,7 +75,7 @@ pub const NetPacket = struct {
     }
 
     pub fn free_with(self: *@This(), allocator: std.mem.Allocator) void {
-        _ = allocator.free(self.message.raw_data);
+        self.message.free_with(allocator);
     }
 };
 
