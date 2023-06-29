@@ -1,4 +1,7 @@
 pub const Messages = struct {
+    pub const bits = 6; // bits in a network message
+    pub const Type = u6; // should be the same bits as above
+
     pub const MessageTypes = enum {
         NET,
         SVC,
@@ -15,7 +18,18 @@ pub const Messages = struct {
         return .CLC;
     }
 
-    pub const all = enum(u8) {
+    /// duplicate of the first three elements of all netmsg types.
+    pub const control = enum(Messages.Type) {
+        NOP = 0,
+        DISCONNECT = 1,
+        FILE = 2,
+    };
+
+    pub const all = enum(Messages.Type) {
+        /// check whether a message is NOP, DISCONNECT, or FILE
+        pub inline fn isControlMessage(self: Messages.all) bool {
+            return @enumToInt(self) < 2;
+        }
         // NET
         NOP = 0,
         DISCONNECT = 1,

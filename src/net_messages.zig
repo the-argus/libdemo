@@ -8,15 +8,7 @@ const builtin = @import("builtin");
 const DemoError = @import("error.zig").DemoError;
 const log = std.log.scoped(.libdemo);
 const io = @import("io.zig");
-
-const NETMSG_TYPE_BITS = 6; // bits in a network message
-const NETMSG_TYPE = u6; // should be the same bits as above
-
-const netcodes = enum(NETMSG_TYPE) {
-    NOOP = 0,
-    DISCONNECT = 1,
-    FILE = 2,
-};
+const netmsg = @import("net_types/definitions.zig").Messages;
 
 const FixedBufferStreamReader = std.io.Reader(
     *std.io.FixedBufferStream([]const u8),
@@ -53,17 +45,22 @@ pub const SimpleBuffer = struct {
 
     pub fn processMessages(self: *@This()) !void {
         while (true) {
-            const cmd = @intCast(NETMSG_TYPE, self.readBits(NETMSG_TYPE_BITS) catch |err| {
+            const cmd = @intCast(netmsg.Type, self.readBits(netmsg.bits) catch |err| {
                 warnBitReaderError(err);
                 return DemoError.Corruption;
             });
 
-            const netcode = std.meta.intToEnum(netcodes, cmd) catch {
+            const netcode = @intToEnum(netmsg.all, cmd);
+
+            if (!netcode.isControlMessage()) {
+                log.debug("Regular network message found: {any}", .{netcode});
                 self.processRegularMessage(cmd);
                 return;
-            };
+            }
+            const control_code = @intToEnum(netmsg.control, @enumToInt(netcode));
+            log.debug("Network control message found: {any}", .{control_code});
 
-            if (!try self.processControlMessage(netcode)) {
+            if (!try self.processControlMessage(control_code)) {
                 // disconnect
                 return;
             }
@@ -72,7 +69,7 @@ pub const SimpleBuffer = struct {
     }
 
     // as opposed to a control message (file, disconnect, noop)
-    fn processRegularMessage(self: *@This(), cmd: NETMSG_TYPE) void {
+    fn processRegularMessage(self: *@This(), cmd: netmsg.Type) void {
         _ = cmd;
         _ = self;
     }
@@ -81,9 +78,9 @@ pub const SimpleBuffer = struct {
     /// check "bool CNetChan::ProcessControlMessage(int cmd, bf_read &buf)"
     /// in net_chan.cpp. this this case, self is buf (or self.data)
     ///
-    fn processControlMessage(self: *@This(), cmd: netcodes) !bool {
+    fn processControlMessage(self: *@This(), cmd: netmsg.control) !bool {
         switch (cmd) {
-            .NOOP => {
+            .NOP => {
                 return true;
             },
             .DISCONNECT => {
