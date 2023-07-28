@@ -8,7 +8,7 @@ const builtin = @import("builtin");
 const DemoError = @import("error.zig").DemoError;
 const log = std.log.scoped(.libdemo);
 const io = @import("io.zig");
-const netmsg = @import("net_types/definitions.zig").Messages;
+const netmsg = @import("net_types/definitions.zig");
 
 const FixedBufferStreamReader = std.io.Reader(
     *std.io.FixedBufferStream([]const u8),
@@ -21,6 +21,57 @@ const MemoryBitReader = std.io.BitReader(
     builtin.cpu.arch.endian(),
     FixedBufferStreamReader,
 );
+
+// also see: CBaseClient::ConnectionStart and CBaseClientState::ConnectionStart
+const subscribed_messages_client = &[_]netmsg.GenericMessage{
+    .{ .type = .NET, .id = .{ .net_id = .TICK } },
+    .{ .type = .NET, .id = .{ .net_id = .STRING_CMD } },
+    .{ .type = .NET, .id = .{ .net_id = .SET_CONVAR } },
+    .{ .type = .NET, .id = .{ .net_id = .SIGNON_STATE } },
+
+    .{ .type = .CLC, .id = .{ .clc_id = .CLIENT_INFO } },
+    .{ .type = .CLC, .id = .{ .clc_id = .MOVE } },
+    .{ .type = .CLC, .id = .{ .clc_id = .VOICE_DATA } },
+    .{ .type = .CLC, .id = .{ .clc_id = .BASELINE_ACKNOWLEDGE } },
+    .{ .type = .CLC, .id = .{ .clc_id = .LISTEN_EVENTS } },
+    .{ .type = .CLC, .id = .{ .clc_id = .GET_CVAR_VALUE_RESPONSE } },
+    .{ .type = .CLC, .id = .{ .clc_id = .FILE_CRC_CHECK } },
+    .{ .type = .CLC, .id = .{ .clc_id = .FILE_MD5_CHECK } },
+    .{ .type = .CLC, .id = .{ .clc_id = .CMD_KEY_VALUES } },
+};
+
+const subscribed_messages_server = &[_]netmsg.GenericMessage{
+    .{ .type = .NET, .id = .{ .net_id = .TICK } },
+    .{ .type = .NET, .id = .{ .net_id = .STRING_CMD } },
+    .{ .type = .NET, .id = .{ .net_id = .SET_CONVAR } },
+    .{ .type = .NET, .id = .{ .net_id = .SIGNON_STATE } },
+
+    .{ .type = .SVC, .id = .{ .svc_id = .PRINT } },
+    .{ .type = .SVC, .id = .{ .svc_id = .SERVER_INFO } },
+    .{ .type = .SVC, .id = .{ .svc_id = .SEND_TABLE } },
+    .{ .type = .SVC, .id = .{ .svc_id = .CLASS_INFO } },
+    .{ .type = .SVC, .id = .{ .svc_id = .SET_PAUSE } },
+    .{ .type = .SVC, .id = .{ .svc_id = .CREATE_STRING_TABLE } },
+    .{ .type = .SVC, .id = .{ .svc_id = .UPDATE_STRING_TABLE } },
+    .{ .type = .SVC, .id = .{ .svc_id = .VOICE_INIT } },
+    .{ .type = .SVC, .id = .{ .svc_id = .VOICE_DATA } },
+    .{ .type = .SVC, .id = .{ .svc_id = .SOUNDS } },
+    .{ .type = .SVC, .id = .{ .svc_id = .SET_VIEW } },
+    .{ .type = .SVC, .id = .{ .svc_id = .FIX_ANGLE } },
+    .{ .type = .SVC, .id = .{ .svc_id = .CROSSHAIR_ANGLE } },
+    .{ .type = .SVC, .id = .{ .svc_id = .BSP_DECAL } },
+    .{ .type = .SVC, .id = .{ .svc_id = .GAME_EVENT } },
+    .{ .type = .SVC, .id = .{ .svc_id = .USER_MESSAGE } },
+    .{ .type = .SVC, .id = .{ .svc_id = .ENTITY_MESSAGE } },
+    .{ .type = .SVC, .id = .{ .svc_id = .PACKET_ENTITIES } },
+    .{ .type = .SVC, .id = .{ .svc_id = .TEMP_ENTITIES } },
+    .{ .type = .SVC, .id = .{ .svc_id = .PREFETCH } },
+    .{ .type = .SVC, .id = .{ .svc_id = .MENU } },
+    .{ .type = .SVC, .id = .{ .svc_id = .GAME_EVENT_LIST } },
+    .{ .type = .SVC, .id = .{ .svc_id = .GET_CVAR_VALUE } },
+    .{ .type = .SVC, .id = .{ .svc_id = .CMD_KEY_VALUES } },
+    .{ .type = .SVC, .id = .{ .svc_id = .SET_PAUSE_TIMED } },
+};
 
 pub const NetworkBitBuffer = struct {
     reader: MemoryBitReader,
@@ -56,37 +107,41 @@ pub const NetworkBitBuffer = struct {
                 return DemoError.Corruption;
             });
 
-            const netcode = std.meta.intToEnum(netmsg.all, cmd) catch {
-                return InputError.InvalidNetworkPacketType;
+            // we are always interested in control code regardless of subscribed_messages
+            if (netmsg.isControlMessage(cmd)) {
+                const control_code = @intToEnum(netmsg.Control, cmd);
+                log.debug("Network control message found: {any}", .{control_code});
+                if (!try self.processControlMessage(control_code)) {
+                    // disconnect
+                    return;
+                }
+                // if no disconnect, try to read a netcode again
+                continue;
+            }
+
+            const subscribed = netmsg.getSubscribed(cmd, subscribed_messages_server);
+            const message = block: {
+                if (subscribed) |msg| {
+                    break :block msg;
+                }
+                std.log.err("Unknown/Unexpected net message with id {any}", .{cmd});
+                return;
             };
+            log.debug("Regular network message found: {any}", .{message});
 
-            if (!netcode.isControlMessage()) {
-                log.debug("Regular network message found: {any}", .{netcode});
-                self.processRegularMessage(cmd);
-                return;
+            switch (message.type) {
+                .CLC => {},
+                .NET => {},
+                .SVC => {},
             }
-
-            const control_code = @intToEnum(netmsg.control, @enumToInt(netcode));
-            log.debug("Network control message found: {any}", .{control_code});
-            if (!try self.processControlMessage(control_code)) {
-                // disconnect
-                return;
-            }
-            // if no disconnect, try to read a netcode again (continue)
         }
-    }
-
-    // as opposed to a control message (file, disconnect, noop)
-    fn processRegularMessage(self: *@This(), cmd: netmsg.Type) void {
-        _ = cmd;
-        _ = self;
     }
 
     ///
     /// check "bool CNetChan::ProcessControlMessage(int cmd, bf_read &buf)"
     /// in net_chan.cpp. this this case, self is buf (or self.data)
     ///
-    fn processControlMessage(self: *@This(), cmd: netmsg.control) !bool {
+    fn processControlMessage(self: *@This(), cmd: netmsg.Control) !bool {
         switch (cmd) {
             .NOP => {
                 return true;
