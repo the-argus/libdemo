@@ -77,11 +77,19 @@ pub const NetworkBitBuffer = struct {
     reader: MemoryBitReader,
     stream: *std.io.FixedBufferStream([]const u8),
     raw_data: []const u8,
+    needs_free: packed struct {
+        stream: bool,
+        raw_data: bool,
+    },
 
     pub const ReadError = error{ OutputBufferTooSmall, Overflow, EndOfBuffer };
     pub const InputError = error{InvalidNetworkPacketType};
 
-    pub fn wrap(allocator: std.mem.Allocator, raw: []const u8) !@This() {
+    fn wrapGeneric(
+        allocator: std.mem.Allocator,
+        raw: []const u8,
+        comptime opt: struct { owns: bool },
+    ) !@This() {
         var stream = try allocator.create(std.io.FixedBufferStream([]const u8));
         stream.* = std.io.fixedBufferStream(raw);
         var reader = MemoryBitReader.init(stream.*.reader());
@@ -89,12 +97,25 @@ pub const NetworkBitBuffer = struct {
             .reader = reader,
             .stream = stream,
             .raw_data = raw,
+            .needs_free = .{ .stream = true, .raw_data = opt.owns },
         };
     }
 
+    pub fn wrap(allocator: std.mem.Allocator, raw: []const u8) !@This() {
+        return wrapGeneric(allocator, raw, .{ .owns = false });
+    }
+
+    pub fn wrapOwning(allocator: std.mem.Allocator, raw: []const u8) !@This() {
+        return wrapGeneric(allocator, raw, .{ .owns = true });
+    }
+
     pub fn free_with(self: @This(), allocator: std.mem.Allocator) void {
-        _ = allocator.destroy(self.stream);
-        _ = allocator.free(self.raw_data);
+        if (self.needs_free.stream) {
+            _ = allocator.destroy(self.stream);
+        }
+        if (self.needs_free.raw_data) {
+            _ = allocator.free(self.raw_data);
+        }
     }
 
     pub fn processMessages(self: *@This()) !void {
@@ -129,10 +150,55 @@ pub const NetworkBitBuffer = struct {
             };
             log.debug("Regular network message found: {any}", .{message});
 
+            const err = "developer error. didn't deal with a network message type which was subscribed to";
             switch (message.type) {
-                .CLC => {},
-                .NET => {},
-                .SVC => {},
+                .CLC => {
+                    switch (message.id.clc_id) {
+                        else => {
+                            @panic(err);
+                        },
+                    }
+                },
+                .NET => {
+                    switch (message.id.net_id) {
+                        .TICK => {},
+                        .STRING_CMD => {},
+                        .SET_CONVAR => {},
+                        .SIGNON_STATE => {},
+                        else => {
+                            @panic(err);
+                        },
+                    }
+                },
+                .SVC => {
+                    switch (message.id.svc_id) {
+                        .PRINT => {},
+                        .SERVER_INFO => {},
+                        .SEND_TABLE => {},
+                        .CLASS_INFO => {},
+                        .SET_PAUSE => {},
+                        .CREATE_STRING_TABLE => {},
+                        .UPDATE_STRING_TABLE => {},
+                        .VOICE_INIT => {},
+                        .VOICE_DATA => {},
+                        .SOUNDS => {},
+                        .SET_VIEW => {},
+                        .FIX_ANGLE => {},
+                        .CROSSHAIR_ANGLE => {},
+                        .BSP_DECAL => {},
+                        .GAME_EVENT => {},
+                        .USER_MESSAGE => {},
+                        .ENTITY_MESSAGE => {},
+                        .PACKET_ENTITIES => {},
+                        .TEMP_ENTITIES => {},
+                        .PREFETCH => {},
+                        .MENU => {},
+                        .GAME_EVENT_LIST => {},
+                        .GET_CVAR_VALUE => {},
+                        .CMD_KEY_VALUES => {},
+                        .SET_PAUSE_TIMED => {},
+                    }
+                },
             }
         }
     }
@@ -184,7 +250,7 @@ pub const NetworkBitBuffer = struct {
     }
 
     fn wrapU32AsBytes(allocator: std.mem.Allocator, data: *const u32) !@This() {
-        var slice = block: {
+        const slice = block: {
             var result: []const u8 = undefined;
             result.ptr = @ptrCast([*]const u8, data);
             result.len = @sizeOf(@TypeOf(data));
@@ -204,7 +270,7 @@ pub const NetworkBitBuffer = struct {
 
     /// Reads a series of bytes until reaching a 0 byte. Sends them all to an
     /// output slice, and returns the used slice of the output.
-    fn readStringInto(self: *@This(), out: []u8) ![]u8 {
+    pub fn readStringInto(self: *@This(), out: []u8) ![]u8 {
         var output_slice = out;
         output_slice.len = 0; // start at 0, increment as we read
         var terminated = false;

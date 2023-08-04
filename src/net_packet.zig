@@ -67,7 +67,7 @@ pub const NetPacket = struct {
             .port = undefined,
         };
         const packet_read_results = try file.readRawData(allocator);
-        packet.message = NetworkBitBuffer.wrap(allocator, packet_read_results) catch |err| {
+        packet.message = NetworkBitBuffer.wrapOwning(allocator, packet_read_results) catch |err| {
             allocator.free(packet_read_results);
             return err;
         };
