@@ -319,43 +319,6 @@ fn warnBitReaderError(bit_reader_error: anyerror) void {
     }
 }
 
-// little-endian stuff
-// TODO: move this somewhere more appropriate and look at stdlib alternatives
-// TODO: write tests for bit stuff
-
-/// Stupid bad function just inline it. its here so I remember what
-/// LoadLittleDWord in the tf2 source code.
-fn loadLittleDWord(base: [*]u32, dword_index: u32) u64 {
-    return littleDWord(base[dword_index]);
-}
-
-fn littleDWord(val: u32) u32 {
-    const temp: i32 = 1;
-    if (*@ptrCast(*u8, &temp) == 1) {
-        return val;
-    } else {
-        return dWordSwap(val);
-    }
-}
-
-fn dWordSwap(val: anytype) @TypeOf(val) {
-    switch (@TypeOf(val)) {
-        u32 => {},
-        else => {
-            @compileError("Invalid type for dWordSwap");
-        },
-    }
-    const temp: u32 = undefined;
-
-    temp = *(@ptrCast(*u32, &val)) >> 24;
-    temp |= ((*(@ptrCast(*u32, &val)) & 0x00FF0000) >> 8);
-    temp |= ((*(@ptrCast(*u32, &val)) & 0x0000FF00) << 8);
-    temp |= ((*(@ptrCast(*u32, &val)) & 0x000000FF) << 24);
-
-    return *@ptrCast(*@TypeOf(val), &temp);
-}
-
-// TODO: maybe remove these tests
 //
 // These are tests originally written for my own implementation of bit reader before
 // I realized there was a stdlib implementation. Doesn't hurt to assert that the
