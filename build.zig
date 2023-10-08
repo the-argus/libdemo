@@ -16,6 +16,11 @@ pub fn build(b: *std.Build) !void {
     // Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall
     const mode = b.standardOptimizeOption(.{});
 
+    _ = b.addModule("demo", .{
+        .source_file = .{ .path = "libdemo.zig" },
+        .dependencies = &[_]std.Build.ModuleDependency{},
+    });
+
     // tests -------------------------------------------------------------------
     const main_tests = b.addTest(.{
         .name = "test_exe",
